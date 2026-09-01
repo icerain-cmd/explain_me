@@ -141,3 +141,85 @@ Before responding:
 - apply any size or wrapper limits required by the current host's artifact surface;
 - re-check the top findings against source evidence;
 - include the visualization or a link to the generated SVG in the same turn.
+
+# Hermes Runtime Extension
+
+When authorized runtime or infrastructure access exists, repository evidence alone is not sufficient for claims about a deployed system. Build five evidence layers separately before producing the architecture:
+
+1. **Repository state** — source, compose/manifests, config, entrypoints, migrations, jobs, and declared dependencies.
+2. **Runtime state** — running processes/containers, images, health, restart state, active systemd units/timers, cron jobs, and effective entry commands.
+3. **Network/exposure state** — listening sockets, reverse proxies, TLS termination, hostnames, ingress, public/private bindings, and upstream/downstream routes.
+4. **Persistent-data state** — mounted volumes, database endpoints, durable queues, backups when observable, and rebuildable versus non-rebuildable data.
+5. **External-dependency state** — model providers, SaaS APIs, object storage, DNS/CDN, authentication services, and any dependency whose failure crosses the system boundary.
+
+Never infer one layer from another. A service present in source or compose is **not OBSERVED running** until runtime evidence confirms it. A local listening port is **not publicly exposed** until the reverse-proxy/network path confirms it. A configured provider/model is **not the active provider/model** until runtime configuration, effective process state, or logs confirm it.
+
+## Preferred read-only runtime probes
+
+Use only probes authorized by the user and available in the host. Prefer read-only commands:
+
+- `docker ps`, `docker inspect`, `docker compose ps`;
+- container health, image, mounts, restart policy, effective command;
+- `ss -lntp` or equivalent;
+- `nginx -T` or effective reverse-proxy configuration;
+- `systemctl --type=service --state=running`;
+- `systemctl list-timers`;
+- user/system cron listings where relevant;
+- mount and volume inspection;
+- service-native health/status endpoints;
+- effective provider/model identifiers with all credentials redacted;
+- recent logs only when needed to prove an architectural edge or failure state.
+
+Never print or retain API keys, tokens, passwords, private keys, cookies, Authorization headers, session material, or credential-bearing URLs.
+
+## Evidence status model
+
+Use these evidence states consistently:
+
+- **DECLARED** — deployable source/configuration says it exists.
+- **INTENDED** — docs/comments/design say it should exist, but it is not deployably declared.
+- **OBSERVED** — confirmed in effective runtime.
+- **INFERRED** — strongly implied by multiple evidence points but not directly observed; use sparingly.
+- **UNKNOWN** — material state could not be verified.
+
+`OBSERVED` must never be assigned from repository evidence alone.
+
+## Topology reconciliation
+
+Before drawing the final SVG, reconcile the layers in a ledger with:
+
+`component/edge | declared | observed | mismatch | evidence | consequence`
+
+Prioritize mismatches such as stale or shadow containers, old reverse-proxy routes, duplicated schedulers, orphaned persistent volumes, repository/runtime provider or model drift, local-only assumptions presented as public, public exposure absent from repository configuration, and desired state documented but not deployed.
+
+## AI provider-path verification
+
+For systems using LLM/AI providers, record the effective path without secrets:
+
+`caller -> application service -> provider adapter/router -> provider -> model`
+
+Distinguish configured default, requested provider/model, and actually observed provider/model. If runtime evidence contradicts repository defaults, show runtime as OBSERVED and source defaults as DECLARED. A retry/fallback path is not a stable architecture edge unless configuration or repeated runtime evidence proves that it is.
+
+## Completion gate
+
+Do not report PASS until all applicable checks pass:
+
+- repository instructions read;
+- declared architecture inventoried;
+- runtime inspection attempted when authorized and available;
+- DECLARED / INTENDED / OBSERVED / INFERRED / UNKNOWN kept distinct;
+- network/exposure path checked when relevant;
+- persistent-data responsibility classified;
+- active provider/model path checked when relevant;
+- secrets redacted;
+- SVG validates as XML;
+- SVG has no external runtime dependency;
+- desktop readability inspected;
+- mobile readability inspected or explicitly marked unverified;
+- strengths 3–5 included;
+- risks 3–5 written as evidence -> consequence;
+- exactly three ordered next moves included;
+- evidence ledger provided or embedded;
+- unresolved unknowns that could change the conclusion listed explicitly.
+
+A partial result is acceptable; a false PASS is not. If required evidence cannot be obtained, return `PARTIAL` and name the missing evidence exactly.
